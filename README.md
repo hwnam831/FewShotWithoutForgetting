@@ -284,3 +284,11 @@ A pre-trained ResNet10 model with cosine-similarity based classifier is provided
 [5] S. Ravi and H. Larochelle. Optimization as a model for few-shot learning.
 [6] C. Finn, P. Abbeel, and S. Levine. Model-agnostic meta-learning for fast adaptation of deep networks.
 ```
+
+### NAM Options
+- Add & erase + learnable write/erase coefficients
+- Can we add attention?
+- random init / zero init for weight_novel?
+- extra base cases for better acc?
+- write/erase prob: per base label/ per data / per novel label
+- batched vs step-by-step

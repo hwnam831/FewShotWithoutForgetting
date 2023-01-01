@@ -41,6 +41,26 @@ class FeatExemplarAvgBlock(nn.Module):
         )
         return weight_novel
 
+class NAMBlock(nn.Module):
+    def __init__(self, nKnovel, nKbase):
+        super(NAMBlock, self).__init__()
+        self.write_logits = nn.Parameter(torch.ones(nKnovel, dtype=torch.float32))
+        self.erase_logits = nn.Parameter(torch.ones(nKbase, dtype=torch.float32))
+    def forward(self, features_train, labels_train, weight_base):
+        write_probs = torch.sigmoid(self.write_logits)
+        erase_probs = torch.sigmoid(self.erase_logits)
+        #N-shot, K labels
+        #BNK
+        labels_write = labels_train * write_probs[None,None,:]
+        #BNH
+        normalized_features = F.normalize(features_train, p=2, dim=-1, eps=1e-12)
+        weight_novel = torch.einsum('bnk,bnh->bkh',labels_write,normalized_features)
+        weight_novel = weight_novel.mean(dim=0)
+        outputs = torch.einsum('bnh,kh->bnk',normalized_features,weight_base)
+        outputs_erase = outputs*erase_probs[None,None,:]
+        base_erase = torch.einsum('bnk,bnh->bkh',outputs_erase,normalized_features)
+
+        return weight_novel, weight_base - base_erase
 
 class AttentionBasedBlock(nn.Module):
     def __init__(self, nFeat, nK, scale_att=10.0):
