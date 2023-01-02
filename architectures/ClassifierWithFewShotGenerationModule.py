@@ -55,12 +55,12 @@ class NAMBlock(nn.Module):
         #BNH
         normalized_features = F.normalize(features_train, p=2, dim=-1, eps=1e-12)
         weight_novel = torch.einsum('bnk,bnh->bkh',labels_write,normalized_features)
-        weight_novel = weight_novel.mean(dim=0)
-        outputs = torch.einsum('bnh,kh->bnk',normalized_features,weight_base)
+        #weight_novel = weight_novel.mean(dim=0)
+        outputs = torch.einsum('bnh,bkh->bnk',normalized_features,weight_base)
         outputs_erase = outputs*erase_probs[None,None,:]
         base_erase = torch.einsum('bnk,bnh->bkh',outputs_erase,normalized_features)
 
-        return weight_novel, weight_base - base_erase
+        return weight_novel, weight_base# - base_erase.mean(dim=0)
 
 class AttentionBasedBlock(nn.Module):
     def __init__(self, nFeat, nK, scale_att=10.0):
@@ -153,6 +153,8 @@ class Classifier(nn.Module):
             # involve any learnable parameter and thus does not require
             # training.
             self.favgblock = FeatExemplarAvgBlock(nFeat)
+        elif self.weight_generator_type == "nam":
+            self.namblock = NAMBlock(opt["nKnovel"], nKall)
         elif self.weight_generator_type == "feature_averaging":
             self.favgblock = FeatExemplarAvgBlock(nFeat)
             self.wnLayerFavg = LinearDiag(nFeat)
@@ -230,6 +232,8 @@ class Classifier(nn.Module):
         if self.weight_generator_type == "none":
             weight_novel = self.favgblock(features_train, labels_train)
             weight_novel = weight_novel.view(batch_size, nKnovel, num_channels)
+        elif self.weight_generator_type == "nam":
+            weight_novel, weight_base = self.namblock(features_train, labels_train, weight_base)
         elif self.weight_generator_type == "feature_averaging":
             weight_novel_avg = self.favgblock(features_train, labels_train)
             weight_novel = self.wnLayerFavg(
