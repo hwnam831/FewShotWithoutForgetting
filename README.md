@@ -292,3 +292,4 @@ A pre-trained ResNet10 model with cosine-similarity based classifier is provided
 - extra base cases for better acc?
 - write/erase prob: per base label/ per data / per novel label
 - batched vs step-by-step
+- iteration?
