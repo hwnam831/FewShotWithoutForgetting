@@ -286,10 +286,10 @@ A pre-trained ResNet10 model with cosine-similarity based classifier is provided
 ```
 
 ### NAM Options
-- Add & erase + learnable write/erase coefficients
-- Can we add attention?
-- random init / zero init for weight_novel?
+- Add & erase + learnable write/erase coefficients (Done)
+- Can we add attention? (Done)
+- random init / zero init for weight_novel? 
 - extra base cases for better acc?
-- write/erase prob: per base label/ per data / per novel label
+- write prob (TODO)
 - batched vs step-by-step
 - iteration?

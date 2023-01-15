@@ -106,11 +106,11 @@ class NAMBlock2(nn.Module):
         #First, use novel weights as-is
         weight_novel = torch.einsum('bnk,bnh->bkh',labels_train*(1+erase_probs),normalized_features)
 
-        weight_novel_avg = weight_novel.sum(dim=0)/labels_train.size(1)
-        novel_outputs = torch.einsum('bnh,kh->bnk',normalized_features,weight_novel_avg)
-        novel_outputs = novel_outputs*erase_probs
-        novel_erase = torch.einsum('bnk,bnh->bkh',novel_outputs,normalized_features)
-        weight_novel = weight_novel - novel_erase
+        #weight_novel_avg = weight_novel.sum(dim=0)/labels_train.size(1)
+        #novel_outputs = torch.einsum('bnh,kh->bnk',normalized_features,weight_novel_avg)
+        #novel_outputs = novel_outputs*erase_probs
+        #novel_erase = torch.einsum('bnk,bnh->bkh',novel_outputs,normalized_features)
+        #weight_novel = weight_novel - novel_erase
 
         #weight_novel2 = weight_novel.mean(dim=0,keepdim=True).expand_as(weight_novel)
         outputs = torch.einsum('bnh,bkh->bnk',normalized_features,weight_base)
