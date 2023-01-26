@@ -42,56 +42,8 @@ class FeatExemplarAvgBlock(nn.Module):
         return weight_novel
 
 class NAMBlock(nn.Module):
-    def __init__(self, nKnovel, nKbase):
-        super(NAMBlock, self).__init__()
-        self.write_logits = nn.Parameter(torch.zeros(nKnovel, dtype=torch.float32))
-        self.erase_logits = nn.Parameter(torch.ones(nKbase, dtype=torch.float32))
-    def forward(self, features_train, labels_train, weight_base):
-        write_probs = torch.sigmoid(self.write_logits)
-        erase_probs = torch.sigmoid(self.erase_logits)
-        #N-shot, K labels
-        #BNK
-        #labels_write = labels_train * write_probs[None,None,:]
-        #BNH
-        normalized_features = F.normalize(features_train, p=2, dim=-1, eps=1e-12)
-        #First, use novel weights as-is
-        #weight_novel = torch.einsum('bnk,bnh->bkh',labels_train,normalized_features)
-        
-        labels_train_transposed = labels_train.transpose(1, 2)
-        weight_novel = torch.bmm(labels_train_transposed, features_train)
-        weight_novel = weight_novel.div(
-            labels_train_transposed.sum(dim=2, keepdim=True).expand_as(weight_novel)
-        )
-
-        #weight_novel2 = weight_novel.mean(dim=0,keepdim=True).expand_as(weight_novel)
-        outputs = torch.einsum('bnh,bkh->bnk',normalized_features,weight_base)
-        outputs_erase = outputs*erase_probs[None,None,:weight_base.size(1)]
-        base_erase = torch.einsum('bnk,bnh->bkh',outputs_erase,normalized_features)
-        return weight_novel, weight_base - base_erase.mean(dim=0,keepdim=True)
-
-class Eraser(nn.Module):
-    def __init__(self, nKnovel, nKbase):
-        super().__init__()
-        self.erase_logits = nn.Parameter(torch.zeros(nKbase, dtype=torch.float32))
-    def forward(self, features_train, weight_base):
-        erase_probs = torch.sigmoid(self.erase_logits)
-        #N-shot, K labels
-        #BNK
-        #labels_write = labels_train * write_probs[None,None,:]
-        #BNH
-        normalized_features = F.normalize(features_train, p=2, dim=-1, eps=1e-12)
-        #First, use novel weights as-is
-        #weight_novel = torch.einsum('bnk,bnh->bkh',labels_train,normalized_features)
-        
-        #weight_novel2 = weight_novel.mean(dim=0,keepdim=True).expand_as(weight_novel)
-        outputs = torch.einsum('bnh,bkh->bnk',normalized_features,weight_base)
-        outputs_erase = outputs*erase_probs[None,None,:weight_base.size(1)]
-        base_erase = torch.einsum('bnk,bnh->bkh',outputs_erase,normalized_features)
-        return weight_base - base_erase#.mean(dim=0)[None,:,:]
-
-class NAMBlock2(nn.Module):
     def __init__(self, nFeat):
-        super(NAMBlock2, self).__init__()
+        super(NAMBlock, self).__init__()
         self.eraser = nn.Sequential(nn.Linear(nFeat, nFeat),
             nn.ReLU(),
             nn.Linear(nFeat, 1),
@@ -214,18 +166,10 @@ class Classifier(nn.Module):
             # training.
             self.favgblock = FeatExemplarAvgBlock(nFeat)
         elif self.weight_generator_type == "nam":
-            self.namblock = NAMBlock(opt["nKnovel"], nKall)
-        elif self.weight_generator_type == "nam2":
-            self.namblock = NAMBlock2(nFeat)
+            self.namblock = NAMBlock(nFeat)
         elif self.weight_generator_type == "namattention":
             scale_att = opt["scale_att"] if ("scale_att" in opt) else 10.0
-            self.namblock = NAMBlock(opt["nKnovel"], nKall)
-            self.attblock = AttentionBasedBlock(nFeat, nKall, scale_att=scale_att)
-            self.wnLayerFavg = LinearDiag(nFeat)
-            self.wnLayerWatt = LinearDiag(nFeat)
-        elif self.weight_generator_type == "nam2attention":
-            scale_att = opt["scale_att"] if ("scale_att" in opt) else 10.0
-            self.namblock = NAMBlock2(nFeat)
+            self.namblock = NAMBlock(nFeat)
             self.attblock = AttentionBasedBlock(nFeat, nKall, scale_att=scale_att)
             self.wnLayerFavg = LinearDiag(nFeat)
             self.wnLayerWatt = LinearDiag(nFeat)
@@ -307,34 +251,11 @@ class Classifier(nn.Module):
             weight_novel = self.favgblock(features_train, labels_train)
             weight_novel = weight_novel.view(batch_size, nKnovel, num_channels)
         elif self.weight_generator_type == "nam":
-            weight_novel, weight_base = self.namblock(features_train, labels_train, weight_base)
-        elif self.weight_generator_type == "nam2":
             weight_base_tmp = F.normalize(
                 weight_base, p=2, dim=weight_base.dim() - 1, eps=1e-12
             )
             weight_novel, weight_base = self.namblock(features_train, labels_train, weight_base_tmp)
         elif self.weight_generator_type == "namattention":
-            weight_novel_avg, weight_base_new = self.namblock(features_train, labels_train, weight_base)
-            weight_novel_avg = self.wnLayerFavg(
-                weight_novel_avg.view(batch_size * nKnovel, num_channels)
-            )
-            if self.classifier_type == "cosine":
-                weight_base_tmp = F.normalize(
-                    weight_base, p=2, dim=weight_base.dim() - 1, eps=1e-12
-                )
-            else:
-                weight_base_tmp = weight_base
-
-            weight_novel_att = self.attblock(
-                features_train, labels_train, weight_base_tmp, Kbase_ids
-            )
-            weight_novel_att = self.wnLayerWatt(
-                weight_novel_att.view(batch_size * nKnovel, num_channels)
-            )
-            weight_novel = weight_novel_avg + weight_novel_att
-            weight_novel = weight_novel.view(batch_size, nKnovel, num_channels)
-            weight_base = weight_base_new
-        elif self.weight_generator_type == "nam2attention":
             if self.classifier_type == "cosine":
                 weight_base_tmp = F.normalize(
                     weight_base, p=2, dim=weight_base.dim() - 1, eps=1e-12
