@@ -53,7 +53,7 @@ pretrainedC = (
 )
 net_optionsC = {
     "classifier_type": "cosine",
-    "weight_generator_type": "attention_based",
+    "weight_generator_type": "feature_averaging",
     "nKall": nKbase,
     "nFeat": 512,
     "scale_cls": 10,

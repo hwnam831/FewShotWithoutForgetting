@@ -34,7 +34,7 @@ class FewShot(Algorithm):
         self.activate_dropout = (
             opt["activate_dropout"] if ("activate_dropout" in opt) else False
         )
-        self.keep_best_model_metric_name = "AccuracyNovel" # @TODO
+        self.keep_best_model_metric_name = "AccuracyBoth" # @TODO
         # self.keep_best_model_metric_name = None
 
     def allocate_tensors(self):
@@ -309,6 +309,9 @@ class FewShot(Algorithm):
             loss_record["AccuracyNovel"] = top1accuracy(
                 cls_scores_var.data, labels_test_var.data
             )
+            loss_record["AccuracyBoth"] = top1accuracy(
+                cls_scores_var.data, labels_test_var.data
+            )
         # ***********************************************************************
 
         # ***********************************************************************
@@ -323,13 +326,19 @@ class FewShot(Algorithm):
         if not do_train:
             if self.biter == 0:
                 self.test_accuracies = {"AccuracyNovel": []}
-            self.test_accuracies["AccuracyNovel"].append(loss_record["AccuracyNovel"])
+                self.both_accuracies = {"AccuracyBoth": []}
+            self.test_accuracies["AccuracyNovel"].append(loss_record["AccuracyNovel"].cpu())
+            self.both_accuracies["AccuracyBoth"].append(loss_record["AccuracyBoth"].cpu())
             if self.biter == (self.bnumber - 1):
                 # Compute the std and the confidence interval of the accuracy of
                 # the novel categories.
                 stds = np.std(np.array(self.test_accuracies["AccuracyNovel"]), 0)
+                stds2 = np.std(np.array(self.both_accuracies["AccuracyBoth"]), 0)
                 ci95 = 1.96 * stds / np.sqrt(self.bnumber)
+                ci952 = 1.96 * stds2 / np.sqrt(self.bnumber)
                 loss_record["AccuracyNovel_std"] = stds
                 loss_record["AccuracyNovel_cnf"] = ci95
+                loss_record["AccuracyBoth_std"] = stds2
+                loss_record["AccuracyBoth_cnf"] = ci952
 
         return loss_record

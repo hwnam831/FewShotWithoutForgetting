@@ -96,15 +96,20 @@ class NAMBlock2(nn.Module):
             nn.ReLU(),
             nn.Linear(nFeat, 1),
             nn.Sigmoid())
+        self.writer = nn.Sequential(nn.Linear(nFeat, nFeat),
+            nn.ReLU(),
+            nn.Linear(nFeat, 1),
+            nn.Sigmoid())
     def forward(self, features_train, labels_train, weight_base):
         erase_probs = self.eraser(features_train)#B,N,1
+        write_probs = self.eraser(features_train)#B,N,1
         #N-shot, K labels
         #BNK
         #labels_write = labels_train * write_probs[None,None,:]
         #BNH
         normalized_features = F.normalize(features_train, p=2, dim=-1, eps=1e-12)
         #First, use novel weights as-is
-        weight_novel = torch.einsum('bnk,bnh->bkh',labels_train*(1+erase_probs),normalized_features)
+        weight_novel = torch.einsum('bnk,bnh->bkh',labels_train*write_probs,normalized_features)
 
         #weight_novel_avg = weight_novel.sum(dim=0)/labels_train.size(1)
         #novel_outputs = torch.einsum('bnh,kh->bnk',normalized_features,weight_novel_avg)

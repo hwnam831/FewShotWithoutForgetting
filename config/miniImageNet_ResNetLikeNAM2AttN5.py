@@ -3,7 +3,7 @@ config = {}
 
 nKbase = 64
 nKnovel = 5
-nExemplars = 1
+nExemplars = 5
 
 data_train_opt = {}
 data_train_opt["nKnovel"] = nKnovel
@@ -11,7 +11,7 @@ data_train_opt["nKbase"] = -1
 data_train_opt["nExemplars"] = nExemplars
 data_train_opt["nTestNovel"] = nKnovel * 3
 data_train_opt["nTestBase"] = nKnovel * 3
-data_train_opt["batch_size"] = 8
+data_train_opt["batch_size"] = 4
 data_train_opt["epoch_size"] = data_train_opt["batch_size"] * 1000
 
 data_test_opt = {}
@@ -31,7 +31,7 @@ config["max_num_epochs"] = 45
 networks = {}
 net_optionsF = {"userelu": False, "in_planes": 3, "dropout": 0.5}
 pretrainedF = (
-    "./experiments/miniImageNet_ResNetLikeCosineClassifier/feat_model_net_epoch*.best"
+    "./experiments/miniImageNet_ResNetLikeNAM2/feat_model_net_epoch*.best"
 )
 networks["feat_model"] = {
     "def_file": "architectures/ResNetLike.py",
@@ -49,11 +49,11 @@ net_optim_paramsC = {
     "LUT_lr": [(10 * 2, 0.1), (20 * 2, 0.006), (25 * 2, 0.0012), (30 * 2, 0.00024)],
 }
 pretrainedC = (
-    "./experiments/miniImageNet_ResNetLikeCosineClassifier/classifier_net_epoch*.best"
+    "./experiments/miniImageNet_ResNetLikeNAM2/classifier_net_epoch*.best"
 )
 net_optionsC = {
     "classifier_type": "cosine",
-    "weight_generator_type": "attention_based",
+    "weight_generator_type": "nam2attention",
     "nKall": nKbase,
     "nFeat": 512,
     "scale_cls": 10,
